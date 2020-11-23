@@ -9,4 +9,4 @@ The dataset is as mentioned text from the newspaper Lyna. A few remarks should b
 This is why a digitisation process was started in 2014. The process encompassed amongst other things a proces of text recognition (called Optical Character Recognintion(OCR)) on the now digital copies of the photographed newspapers. This made it possibel to do free text searches throug a news paper, which was a great improvement compared to turning your self through a mikrofilm.  
 This proces of OCR works very well on 'modern' characters, but has some limitations on the fonts used in newspapers in the 18th century, the so-called fraktur:
 
-![](www.hax.odsbjerg.dk/fraktur.png)
+![](http://hax.odsbjerg.dk/fraktur.png)
