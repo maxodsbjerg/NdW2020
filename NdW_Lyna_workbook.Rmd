@@ -1,0 +1,195 @@
+---
+title: "Nacht der Wissenschaft 2020 - Code Along - Text mining the newspaper 'Lyna' 1847"
+author: "Max Odsbjerg Pedersen, Martin Hauge"
+output: 
+    html_document:
+      df_print: paged
+      toc: true
+      toc_depth: 2
+      toc_float: true
+---
+
+This report documents text mining on the 1847 editions of the newspaper _Lyna_. The textual data used in this report is made accessible through Library Open Access Repository (LOAR) under the Royal Danish Library. For more information about LOAR and _Lyna_ see: https://loar.kb.dk/handle/1902/7736
+
+The Lyna-1847-dataset comes in the form of a CSV-file(Comma Separated Values), which is a format for storing tabular data. In this dataset the structure is thus:
+
+>*Each row has the following columns:*
+>
+>***RecordID***
+>*The unique id given to each article segment recognised in the digitisation process*
+>
+>***sort_year_asc***
+>*Publication date of the article segment*
+>
+>***editionId***
+>*Unique name given given to newspapers and the date once again*
+>
+>***newspaper_page***
+>*The page in the newspaper that the article segment derives from*
+>
+>***pwa***
+>*measurement for OCR-quality*
+>
+>***lvx_facet***
+>*Internal search facetting*
+>
+>***fulltext_org***
+>*The recognised text from the article segment*"
+
+The dataset is processed in the software programme R, offering various methods for statistical analysis and graphic representation of the results. In R, one works with packages each adding more functionality to the core functions of R. In this example, the relevant packages are:
+
+```{r chunk 1 - load libraries, warning=FALSE, message=FALSE}
+
+```
+Documentation for each package: <br>
+*https://www.tidyverse.org/packages/ <br>
+*https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html <br>
+*https://lubridate.tidyverse.org/ <br>
+*https://ggplot2.tidyverse.org/ <br>
+*https://cran.r-project.org/web/packages/ggwordcloud/vignettes/ggwordcloud.html<br>
+
+Additional information about R: 
+https://www.r-project.org/
+
+
+# Data import
+
+<br>
+The dataset is loaded into R. This happens via the `read_csv` function, which is told the URL pointing to the CSV-file containing the Lyna-data from 1847:
+
+```{r, message=FALSE}
+
+```
+
+# Cleaning the data
+
+## Extracting month out of date
+
+In order to see what words where significant to the individual months in 1847 we need to extract the month out of the date column. Thus we create a new column called "month" using the `mutate()`-function and in this column we place the month from the date column using the `month()`-function: 
+
+```{r}
+
+```
+<br>
+The data processing will be based on the Tidy Data Principle as it is implemented in the tidytext package. The notion is to take text and break it into individual words. In this way, there will be just one word per row in the dataset. However, this poses a problem in relation to proper nouns such as "Frederik Emil August". Using the tidytext principle, this proper noun will break up “frederik” and “emil” and "august" into separate rows. This results in a loss of meaning because these names on their own do not make sense. "Frederik Emil August" is a semantic unit, which we are destroying when converting to the tidytext-format. It can make sense in some text mining task to cleanse the text data so as "Frederik Emil August" becomes "frederik_emil_august" and thus doesn't get destroyed in the tidying process. It is ofcourse impossible to anticipate all semantic units in a text, but in some cases when examining persons and specific entities it would make sense to cleanse before converting to tidy text format. In this case however we will employ a distant reading perspective using the term frequency - inversed document frequency method. Therefore we wont do any cleansing. A lot of talk of the tidytext-format - Let's see it in action! 
+
+Next, we transform the data into the before mentioned tidytext-format which will place each word into a row of its own. This is achieved by using the unnest_tokens function:
+
+```{r}
+
+```
+
+
+<br>
+
+# Analysis
+
+Now we will find the words that appear most commonly per month in the *Lyna* newspapers from 1847.
+```{r word counts pr. chapter}
+
+```
+
+Not surprisingly, particles are the most common words we find. This is not particularly interesting for us in this inquiry, as we want to see which words are specific to the individual months. The particles will appear in all months. The first step is finding a measurement that will allow us to compare the frequency of words across the chapters. We can do this by calculating the word’s, or the term’s, frequency: 
+
+
+
+$$frekvens=\frac{n_{term}}{N_{month}}$$ 
+
+Before we can take this step, we need R to count how many words there are in each month. This is done by using the function `group_by` followed by `summarise`:
+
+
+```{r  counting total words pr. chapter, message=FALSE}
+
+```
+
+
+Then we add the total number of words to our dataframe, which we do with `left_join`:
+
+
+```{r chunk 7 - adding count of total words pr chapter to dataframe}
+
+```
+
+Just typing the name of a dataframe in a code chunk and running it will print the dataframe:
+```{r chunk 8 - printing out new dataframe}
+
+```
+
+Now we have the number we need to calculate the frequency of the words. Below we are calculating the word “und” in May.
+
+
+
+$${frekvens for "und" in 5}=\frac{473}{42249}=0.01119553$$
+
+
+
+
+By calculating the frequency of the terms, we can compare them across each month. However, it is not terribly interesting comparing the word “und” between months. Therefore, we need a way to “punish” words that occur frequently in all months. To achieve this, we are using inversed document frequency(idf):
+
+$$idf(\text{term}) = \ln{\left(\frac{n_{\text{months}}}{n_{\text{months containing term}}}\right)}$$
+
+
+
+Let's calculate the idf-value for "und":
+
+$$idf(\text{term}) = \ln{\left(\frac{12}{12}\right)}=0$$
+
+Thus we punish words that occur with great frequency in all months or many months. Words that occur in all the months cannot really tell us much about a particular chapter. Those words will have an idf of 0 resulting in a tf_idf value that is also 0, because this is defined by multiplying $tf$ with $idf$: 
+
+$$tf\_idf=tf \times idf$$
+$tf\_idf$ for the word "und": 
+
+$$tf\_idf=0.01119553 \times 0= 0$$
+
+
+
+Luckily, R can easily calculate tf and tf_idf for all the words by using the bind_tf_idf function:
+```{r chunk 9 - calculating tf and idf}
+
+```
+Nonetheless we still do not see any interesting words. This is because R lists all the words in an ascending order – lowest to highest. Instead, we will ask it to list them in a descending order – highest to lowest tf_idf:
+
+
+
+```{r chunk 10 - arranging tf_idf descending}
+
+```
+It is hard to get a proper overview - let's do a wordcloud for with the 8 highest $tf\_idf$-values withing each month!
+
+# Visualisation
+Many people who have dipped their toes in the text mining/data mining sea will have seen wordclouds showing the most used words in a text. In this visualisation we are going to create a wordcloud for each month showing the words with the highest tf_idf from that month. By doing so we will get a nice overview of what words are specific and important to each month. Remember that words which appear a lot across the chapters will not show here. 
+
+
+```{r, message=FALSE}
+
+```
+
+Because the space for visualisation is constricted in this .Rmd format we have to save the result as a pdf, where we define a larger canvas. Run the last code and look in the files pane to the right. You should find a file called "lyna1847_wordsclouds.pdf". This is more readable.
+
+
+```{r}
+
+```
+
+# Examining results - moving between distant and close reading
+So let's say we want to examine what is going on with "frciheit" in December. We recognise that this probably is a OCR-misreading of "freiheit". In order to see this words in it's context we turn our eye to our initial dataset, lyna1847. Here we use the `filter`function combined with the `str_detect`-function så get only the rows where "frciheit" appears in the fulltext_org column: 
+```{r}
+
+```
+Okay, this context is a bit hard to examine - let's see the word in it's original context. We can do this through the Danish newspaper collection's media platform called Mediestream. Above we have all the relevant information to make a very precise search: Our word of interest, date, and newspaperID - thus our search string becomes: 
+
+> date:1847-12-15 AND familyId:lyna AND frciheit
+
+Link to the result: 
+
+http://www2.statsbiblioteket.dk/mediestream/avis/record/doms_aviser_page%3Auuid%3Ae70bff63-cfb6-489f-87e8-de78a49458a2/query/date%3A1847-12-15%20AND%20familyId%3Alyna%20AND%20frciheit
+
+# Wrap up
+Congratulations! You have completed your very first text mining task and created an output! You have also successfully moved between a distant reading and the classical close reading  
+You are now ready to venture further into the world of tidy text mining. This short introduction was based on the [Tidy Text Mining with R](https://www.tidytextmining.com)-book. Now that you know how to use an R-markdown you can use the book to explore their methods!
+
+
+
+
+
+
